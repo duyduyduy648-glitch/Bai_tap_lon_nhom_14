@@ -13,6 +13,7 @@
     <TableView fx:id="table" prefHeight="300">
         <columns>
             <TableColumn fx:id="idCol" prefWidth="100" text="Mã ID" />
+            <TableColumn fx:id="typeCol" prefWidth="100" text="Loại" />
             <TableColumn fx:id="nameCol" prefWidth="250" text="Tên sản phẩm" />
             <TableColumn fx:id="priceCol" prefWidth="150" text="Giá khởi điểm" />
         </columns>
@@ -34,8 +35,13 @@
 
         <Label text="Giá:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
         <TextField fx:id="txtPrice" promptText="Giá" text="1231423" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+        <Label text="Giá:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <TextField fx:id="txtPrice" promptText="Giá" text="1231423" GridPane.columnIndex="1" GridPane.rowIndex="3" />
 
-        <Button onAction="#handleAddItem" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;" text="Thêm sản phẩm" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+        <Label fx:id="lblExtraParam" text="Thông tin thêm:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+        <TextField fx:id="txtExtraParam" promptText="Nhập thông tin" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+
+        <Button onAction="#handleAddItem" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;" text="Thêm sản phẩm" GridPane.columnIndex="1" GridPane.rowIndex="5" />
       <columnConstraints>
          <ColumnConstraints />
          <ColumnConstraints />
