@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane prefHeight="500.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.BidderController">
+    <!-- Thanh Header -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #1976d2; -fx-padding: 15;">
+            <Label text="SÀN ĐẤU GIÁ (BIDDER)" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <!-- Nút đăng xuất đã gọi hàm handleLogout -->
+            <Button text="Đăng xuất" onAction="#handleLogout" style="-fx-background-color: white; -fx-text-fill: #1976d2; -fx-font-weight: bold;"/>
+        </HBox>
+    </top>
+
+    <!-- Phần thân giữa -->
+    <center>
+        <VBox alignment="CENTER" spacing="30">
+            <Label text="Tìm kiếm và đặt giá sản phẩm bạn yêu thích" style="-fx-font-size: 16px;"/>
+            <HBox alignment="CENTER" spacing="20">
+                <!-- Các nút chức năng đã được gắn hàm xử lý tương ứng -->
+                <Button text="Tìm kiếm sản phẩm" onAction="#handleSearchItem" prefWidth="160" prefHeight="50" style="-fx-font-size: 14px;"/>
+                <Button text="Phiên đang tham gia" onAction="#handleMyAuctions" prefWidth="160" prefHeight="50" style="-fx-font-size: 14px;"/>
+                <Button text="Nạp tiền / Số dư" onAction="#handleTopUp" prefWidth="160" prefHeight="50" style="-fx-font-size: 14px;"/>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>
