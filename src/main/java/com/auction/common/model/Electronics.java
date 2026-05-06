@@ -5,9 +5,9 @@ import java.time.LocalDateTime;
 public class Electronics extends Item {
     private int warrantyMonths;
 
-    public Electronics(String id, String name, String description, double startingPrice,
-                       LocalDateTime startTime, LocalDateTime endTime, int warrantyMonths) {
-        super(id, name, description, startingPrice, startTime, endTime);
+    public Electronics(Seller seller, String id, String name, String description, double startingPrice,
+                       LocalDateTime startTime, LocalDateTime endTime, double minIncrement, int warrantyMonths) {
+        super(seller, id, name, description, startingPrice, startTime, endTime, minIncrement);
         this.warrantyMonths = warrantyMonths;
     }
 

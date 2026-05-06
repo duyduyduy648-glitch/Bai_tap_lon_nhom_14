@@ -3,6 +3,7 @@ package com.auction.common.model;
 import java.time.*;
 
 public abstract class Item {
+    protected Seller seller;
     protected String id;
     protected String name;
     protected String description;
@@ -10,9 +11,10 @@ public abstract class Item {
     protected double currentHighestBid;
     protected LocalDateTime startTime;
     protected LocalDateTime endTime;
-
-    public Item(String id, String name, String description, double startingPrice,
-                LocalDateTime startTime, LocalDateTime endTime) {
+    protected final double minIncrement;
+    public Item(Seller seller, String id, String name, String description, double startingPrice,
+                LocalDateTime startTime, LocalDateTime endTime, double minIncrement) {
+        this.seller = seller;
         this.id = id;
         this.name = name;
         this.description = description;
@@ -20,6 +22,7 @@ public abstract class Item {
         this.currentHighestBid = startingPrice; // Lúc mới tạo, giá cao nhất chính là giá khởi điểm
         this.startTime = startTime;
         this.endTime = endTime;
+        this.minIncrement = minIncrement;
         validDateTime();
     }
     public String getDetails() {
@@ -57,7 +60,8 @@ public abstract class Item {
     public String getId() {
         return id;
     }
-
+    public double getMinIncrement() {return minIncrement;}
+    public Seller getSeller(){return seller;}
     public void setId(String id) {
         this.id = id;
     }

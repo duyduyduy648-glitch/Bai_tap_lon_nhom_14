@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 public class Vehicle extends Item {
     private String brand;
-    public Vehicle(String id, String name, String description, double startingPrice,
-                   LocalDateTime startTime, LocalDateTime endTime, String brand) {
-        super(id, name, description, startingPrice, startTime, endTime);
+    public Vehicle(Seller seller, String id, String name, String description, double startingPrice,
+                   LocalDateTime startTime, LocalDateTime endTime, double minIncrement, String brand) {
+        super(seller, id, name, description, startingPrice, startTime, endTime, minIncrement);
         this.brand = brand;
     }
     @Override

@@ -5,9 +5,9 @@ import java.time.LocalDateTime;
 public class Art extends Item {
     private String artist;
 
-    public Art(String id, String name, String description, double startingPrice,
-               LocalDateTime startTime, LocalDateTime endTime, String artist) {
-        super(id, name, description, startingPrice, startTime, endTime);
+    public Art(Seller seller, String id, String name, String description, double startingPrice,
+               LocalDateTime startTime, LocalDateTime endTime, double minIncrement, String artist) {
+        super(seller, id, name, description, startingPrice, startTime, endTime, minIncrement);
         this.artist = artist;
     }
 

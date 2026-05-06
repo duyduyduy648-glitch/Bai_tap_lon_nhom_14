@@ -1,15 +1,32 @@
 package com.auction.client;
 
+import com.auction.common.model.Auction;
+import com.auction.common.model.Item;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MainApp extends Application {
 
     // ✅ PHẢI là static để LoginController, RegisterController gọi được
     private static Stage primaryStage;
+    private static final Map<String, Auction> activeAuctions = new HashMap<>();
+
+    // 2. Hàm đăng ký một phiên đấu giá mới
+    public static void registerAuction(String itemId, Auction auction) {
+        activeAuctions.put(itemId, auction);
+    }
+
+    // 3. Hàm lấy phiên đấu giá dựa trên Item
+    public static Auction getAuctionForItem(Item item) {
+        if (item == null) return null;
+        return activeAuctions.get(item.getId());
+    }
 
     @Override
     public void start(Stage stage) throws Exception {

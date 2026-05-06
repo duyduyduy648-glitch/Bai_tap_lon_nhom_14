@@ -28,6 +28,7 @@ public class ItemManagementController {
     @FXML private TableColumn<Item, String> nameCol;
     @FXML private TableColumn<Item, Double> priceCol;
     @FXML private TableColumn<Item, String> statusCol;
+    @FXML private TableColumn<Item, Double> minIncCol;
 
     @FXML private TextField txtId;
     @FXML private TextField txtName;
@@ -35,6 +36,7 @@ public class ItemManagementController {
     @FXML private ComboBox<String> cbType;
     @FXML private Label lblExtraParam;
     @FXML private TextField txtExtraParam;
+    @FXML private TextField txtMinIncrement;
 
     private final ItemDAO itemDAO = new JsonItemDAO();
     private ObservableList<Item> data;
@@ -57,6 +59,14 @@ public class ItemManagementController {
                 new SimpleStringProperty(cellData.getValue().getStatusDisplay()));
 
         // --- 2. Nạp dữ liệu vào bảng ---
+        var items = itemDAO.getAllItems();
+        if (items == null) {
+            data = FXCollections.observableArrayList();
+            System.err.println("Cảnh báo: Không tải được dữ liệu từ file JSON!");
+        } else {
+            data = FXCollections.observableArrayList(items);
+        }
+        table.setItems(data);
         data = FXCollections.observableArrayList(itemDAO.getAllItems());
         table.setItems(data);
 
@@ -82,6 +92,7 @@ public class ItemManagementController {
             String id = txtId.getText();
             String name = txtName.getText();
             double price = Double.parseDouble(txtPrice.getText());
+            double minIncrement = Double.parseDouble(txtMinIncrement.getText());
             String extraParam = txtExtraParam.getText();
 
             if (extraParam == null || extraParam.trim().isEmpty()) {
@@ -91,13 +102,13 @@ public class ItemManagementController {
 
             // Tạo Item từ Factory
             Item newItem = ItemFactory.createItem(
-                    type, id, name, "Mô tả sản phẩm", price,
-                    LocalDateTime.now(), LocalDateTime.now().plusDays(7),
+                    currentSeller, type, id, name, "Mô tả sản phẩm", price,
+                    LocalDateTime.now(), LocalDateTime.now().plusDays(7), minIncrement,
                     extraParam
             );
 
             // Khởi tạo Auction để kích hoạt logic nghiệp vụ
-            Auction newAuction = new Auction(currentSeller, newItem, 10.0);
+            Auction newAuction = new Auction(currentSeller, newItem);
 
             // Lưu và cập nhật UI
             itemDAO.saveItem(newItem);
@@ -107,7 +118,7 @@ public class ItemManagementController {
             clearForm();
 
         } catch (NumberFormatException nfe) {
-            new Alert(Alert.AlertType.ERROR, "Lỗi: Giá phải là con số!").show();
+            new Alert(Alert.AlertType.ERROR, "Lỗi: Giá và bước giá phải là con số!").show();
         } catch (Exception ex) {
             new Alert(Alert.AlertType.ERROR, "Lỗi hệ thống: " + ex.getMessage()).show();
         }

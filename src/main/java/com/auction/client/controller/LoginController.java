@@ -13,11 +13,11 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 public class LoginController {
-    @FXML private TextField txtUsername;
-    @FXML private PasswordField txtPassword;
+    @FXML public TextField txtUsername;
+    @FXML public PasswordField txtPassword;
 
     @FXML
-    private void handleLogin() {
+    public void handleLogin() {
         String username = txtUsername.getText();
         String password = txtPassword.getText();
 
@@ -53,13 +53,26 @@ public class LoginController {
                 // 3. BỒI THÊM: Kiểm tra và truyền User vào Controller tương ứng
                 if (userRole == Role.SELLER) {
                     ItemManagementController controller = loader.getController();
-                    controller.setSeller((Seller) user); // Truyền Seller vào biến currentSeller
+                    if (user instanceof Seller) {
+                        controller.setSeller((Seller) user);
+                    } else {
+                        // "Đúc" lại đối tượng User thành Seller để tránh lỗi ClassCastException
+                        Seller sellerData = new Seller(user.getUsername(), user.getPassword(), user.getRole());
+                        controller.setSeller(sellerData);
+                    } // Truyền Seller vào biến currentSeller
                 }
-                // Sau này bạn bồi thêm cho BIDDER tại đây:
-                // else if (userRole == Role.BIDDER) {
-                //    BidderController controller = loader.getController();
-                //    controller.setBidder((Bidder) user);
-                // }
+                else if (user.getRole() == Role.BIDDER) {
+                    BidderController controller = loader.getController();
+
+                    // Kiểm tra và ép kiểu hoặc khởi tạo lại đối tượng Bidder cụ thể
+                    if (user instanceof Bidder) {
+                        controller.setBidder((Bidder) user);
+                    } else {
+                        // "Đúc" lại đối tượng User thành Bidder để có đầy đủ tính năng ví tiền
+                        Bidder bidderData = new Bidder(user.getUsername(), user.getPassword(), user.getRole());// Đảm bảo số dư được giữ nguyên
+                        controller.setBidder(bidderData);
+                    }
+                }
 
                 // 4. Hiển thị cảnh mới (Giữ đúng chức năng của switchScene)
                 MainApp.getPrimaryStage().setScene(new Scene(root));

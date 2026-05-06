@@ -1,7 +1,7 @@
 package com.auction.common.model;
 public class Seller extends User {
     private double balance = 0.0;
-    public Seller(String username, String password) {
+    public Seller(String username, String password, Role role) {
         super(username, password, Role.SELLER);
     }
     public double getBalance() {

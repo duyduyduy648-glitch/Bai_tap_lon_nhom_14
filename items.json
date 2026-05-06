@@ -50,7 +50,7 @@
     "endTime": "2026-05-08T17:46:22.7073605"
   },
   {
-    "artist": "Trịnh Hoàng Dâm",
+    "artist": "Trịnh Hoàng Duy",
     "id": "E001",
     "name": "Nem chua",
     "description": "Mô tả",
@@ -58,5 +58,15 @@
     "currentHighestBid": 36000.0,
     "startTime": "2026-05-02T21:19:05.7908897",
     "endTime": "2026-05-09T21:19:05.7908897"
+  },
+  {
+    "warrantyMonths": 10,
+    "id": "LAP01",
+    "name": "Laptop Lenovo LOQ",
+    "description": "Mô tả sản phẩm",
+    "startingPrice": 1000.0,
+    "currentHighestBid": 1000.0,
+    "startTime": "2026-05-07T03:20:25.2314771",
+    "endTime": "2026-05-14T03:20:25.2314771"
   }
 ]

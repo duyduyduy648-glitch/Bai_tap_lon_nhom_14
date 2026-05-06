@@ -19,14 +19,14 @@ public class Auction {
     private boolean winProcessed = false;
     private ArrayList<BidTransaction> BidList = new ArrayList<BidTransaction>();
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-    public Auction (Seller seller, Item item, double minIncrement){
+    public Auction (Seller seller, Item item){
         if (seller == null || item == null) {
             throw new IllegalArgumentException("Seller và Item không được bỏ trống!");
         }
         this.seller = seller;
         this.item = item;
         this.startingPrice = this.item.getStartingPrice();
-        this.minIncrement = minIncrement;
+        this.minIncrement = this.item.getMinIncrement();
         this.currentPrice = this.item.getStartingPrice();
         this.startTime = this.item.startTime;
         this.endTime = this.item.endTime;

@@ -1,5 +1,7 @@
 package com.auction.client.controller;
 
+import com.auction.common.model.Auction;
+import com.auction.common.model.BidTransaction;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 import com.auction.client.MainApp;
@@ -36,6 +38,7 @@ public class BidderController {
     private final ItemDAO itemDAO = new JsonItemDAO();
     private ObservableList<Item> data;
     private Bidder currentBidder;
+    private Auction currentAuction;
 
     // --- BỒI THÊM: Hàm initialize để thiết lập bảng và đồng bộ thời gian ---
     @FXML
@@ -54,6 +57,18 @@ public class BidderController {
         // Nạp dữ liệu
         data = FXCollections.observableArrayList(itemDAO.getAllItems());
         table.setItems(data);
+        for (Item item : data) {
+            if (MainApp.getAuctionForItem(item) == null) {
+                // Kiểm tra an toàn: chỉ tạo nếu item đã có seller
+                if (item.getSeller() != null) {
+                    // Cập nhật tham số thứ 3 là item.getMinIncrement() thay vì để cứng 10.0
+                    Auction auction = new Auction(item.getSeller(), item);
+                    MainApp.registerAuction(item.getId(), auction);
+                } else {
+                    System.out.println("Cảnh báo: Sản phẩm " + item.getId() + " đang thiếu thông tin người bán!");
+                }
+            }
+        }
 
         // Bồi thêm: Bộ cập nhật thời gian thực để Bidder thấy giây nhảy lùi
         Timeline timeline = new Timeline(
@@ -103,13 +118,63 @@ public class BidderController {
     // 3. Xử lý nút "Phiên đang tham gia" (GIỮ NGUYÊN 100% CODE CŨ)
     @FXML
     private void handleMyAuctions(ActionEvent event) {
-        showAlert(Alert.AlertType.INFORMATION, "Tính năng đang phát triển", "Mở danh sách các phiên đấu giá bạn đang theo dõi...");
+        TextInputDialog dialog = new TextInputDialog("0");
+        dialog.setTitle("Nạp tiền vào tài khoản");
+        dialog.setHeaderText("Số dư hiện tại: " + String.format("%.2f $", currentBidder.getAvailableBalance()));
+        dialog.setContentText("Vui lòng nhập số tiền muốn nạp:");
+
+        // 2. Xử lý khi người dùng nhấn OK
+        dialog.showAndWait().ifPresent(amountStr -> {
+            try {
+                double amount = Double.parseDouble(amountStr);
+
+                // 3. Gọi hàm deposit từ lớp Bidder
+                currentBidder.deposit(amount);
+
+                // 4. Cập nhật lại giao diện hiển thị số dư
+                updateBalanceUI();
+
+                showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                        String.format("Đã nạp thành công %.2f $ vào tài khoản.", amount));
+
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu", "Vui lòng nhập một con số hợp lệ!");
+            } catch (IllegalArgumentException e) {
+                // Bắt lỗi số tiền âm từ hàm deposit của lớp Bidder
+                showAlert(Alert.AlertType.ERROR, "Lỗi", e.getMessage());
+            }
+        });
     }
 
     // 4. Xử lý nút "Nạp tiền / Số dư" (GIỮ NGUYÊN 100% CODE CŨ)
     @FXML
     private void handleTopUp(ActionEvent event) {
-        showAlert(Alert.AlertType.INFORMATION, "Tính năng đang phát triển", "Mở giao diện Nạp tiền vào tài khoản...");
+        TextInputDialog dialog = new TextInputDialog("0");
+        dialog.setTitle("Nạp tiền vào tài khoản");
+        dialog.setHeaderText("Số dư hiện tại: " + String.format("%.2f $", currentBidder.getAvailableBalance()));
+        dialog.setContentText("Vui lòng nhập số tiền muốn nạp:");
+
+        // 2. Xử lý khi người dùng nhấn OK
+        dialog.showAndWait().ifPresent(amountStr -> {
+            try {
+                double amount = Double.parseDouble(amountStr);
+
+                // 3. Gọi hàm deposit từ lớp Bidder
+                currentBidder.deposit(amount);
+
+                // 4. Cập nhật lại giao diện hiển thị số dư
+                updateBalanceUI();
+
+                showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                        String.format("Đã nạp thành công %.2f $ vào tài khoản.", amount));
+
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu", "Vui lòng nhập một con số hợp lệ!");
+            } catch (IllegalArgumentException e) {
+                // Bắt lỗi số tiền âm từ hàm deposit của lớp Bidder
+                showAlert(Alert.AlertType.ERROR, "Lỗi", e.getMessage());
+            }
+        });
     }
 
     // --- BỒI THÊM: Xử lý Đặt giá (Mới) ---
@@ -123,7 +188,7 @@ public class BidderController {
 
         // Ở đây bạn sẽ bồi thêm logic gọi auction.placeBid()
         // và trừ tiền/đóng băng tiền của currentBidder
-        showAlert(Alert.AlertType.CONFIRMATION, "Đặt giá", "Bạn đang đặt giá cho: " + selectedItem.getName());
+        showAuctionWindow(selectedItem);
     }
 
     // Hàm phụ trợ để hiển thị hộp thoại thông báo (GIỮ NGUYÊN 100% CODE CŨ)
@@ -182,47 +247,64 @@ public class BidderController {
 
     private void processBidLogic(Item item, String amountStr) {
         try {
+            if (amountStr == null || amountStr.trim().isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, "Chú ý", "Vui lòng nhập số tiền!");
+                return;
+            }
+            // 1. Chuyển đổi dữ liệu nhập vào
             double amount = Double.parseDouble(amountStr);
 
-            // Lỗi 1: Kiểm tra bước giá (Phải cao hơn giá hiện tại)
-            if (amount <= item.getCurrentHighestBid()) {
-                showAlert(Alert.AlertType.ERROR, "Lỗi đặt giá", "Giá mới phải cao hơn giá hiện tại!");
+            // 2. Tạo đối tượng giao dịch đặt giá mới
+            // Cần đảm bảo BidTransaction của bạn nhận (Bidder, double) trong Constructor
+            BidTransaction newBid = new BidTransaction(currentBidder, amount);
+
+            // 3. Lấy đối tượng Auction đang quản lý Item này
+            // Giả sử bạn có một cách để lấy Auction (qua Map hoặc Manager)
+            // Nếu bạn đang lưu Auction ngay trong Item thì dùng: item.getAuction()
+            Auction auction = MainApp.getAuctionForItem(item);
+
+            if (auction == null) {
+                showAlert(Alert.AlertType.ERROR, "Lỗi", "Không tìm thấy phiên đấu giá cho sản phẩm này!");
                 return;
             }
 
-            // Lỗi 2: Kiểm tra số dư khả dụng thực tế
-            if (currentBidder.getAvailableBalance() < amount) {
-                showAlert(Alert.AlertType.ERROR, "Lỗi số dư", "Số dư khả dụng không đủ để đặt giá này!");
-                return;
-            }
+            // 4. GỌI AUCTION XỬ LÝ (QUAN TRỌNG NHẤT)
+            // Hàm placeBid(newBid) của bạn sẽ tự động:
+            // - Check status (UPCOMING/ACTIVE/FINISHED)
+            // - Check giá tối thiểu (minIncrement)
+            // - Check nếu người dùng đang giữ giá cao nhất (lastBid.getBidder())
+            // - Tự động gọi lastBid.refund() để trả tiền cho người cũ
+            // - Tự động gọi newBid.frozen() để trừ tiền của currentBidder
+            auction.placeBid(newBid);
 
-            // Lỗi 3: Kiểm tra thời gian phiên đấu giá
-            if (!item.getStatusDisplay().equals("ACTIVE")) {
-                showAlert(Alert.AlertType.ERROR, "Lỗi thời gian", "Phiên đấu giá này đã kết thúc hoặc chưa bắt đầu!");
-                return;
-            }
+            // --- NẾU CHẠY ĐẾN ĐÂY LÀ THÀNH CÔNG ---
 
-            // --- XỬ LÝ THÀNH CÔNG ---
+            // 5. Cập nhật dữ liệu hiển thị (UI)
+            // Cập nhật lại số dư khả dụng (vì đã bị trừ trong auction.placeBid -> newBid.frozen)
+            lblBalance.setText(String.format("%.2f $", currentBidder.getAvailableBalance()));
 
-            // 1. Cập nhật Model Item
-            item.setCurrentHighestBid(amount);
-            item.setStartingPrice(amount); // Để TableView cập nhật cột giá hiển thị
-            itemDAO.saveItem(item);        // Lưu vào file JSON
+            // Cập nhật lại giá hiển thị trên bảng chính (lấy giá mới nhất từ Auction)
+            item.setCurrentHighestBid(auction.getCurrentPrice());
+            table.refresh();
 
-            // 2. Xử lý dòng tiền của Bidder (Đúng theo class Bidder bạn gửi)
-            currentBidder.freezeMoney(amount);
-
-            // 3. Cập nhật giao diện (UI)
-            table.refresh(); // Làm mới bảng chính
-            lblBalance.setText(String.format("%.2f $", currentBidder.getAvailableBalance())); // Cập nhật Header
-
-            showAlert(Alert.AlertType.INFORMATION, "Thành công", "Bạn đã đặt giá và đóng băng tiền cọc thành công!");
+            showAlert(Alert.AlertType.INFORMATION, "Thành công", "Bạn đã đặt giá thành công!");
 
         } catch (NumberFormatException e) {
             showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu", "Vui lòng nhập một con số hợp lệ!");
         } catch (IllegalArgumentException e) {
-            // Bắt các lỗi ném ra từ class Bidder (ví dụ số tiền âm)
-            showAlert(Alert.AlertType.ERROR, "Lỗi logic", e.getMessage());
+            // Đây là nơi bắt tất cả các lỗi logic bạn đã viết trong Auction.java
+            // Ví dụ: "Bạn đang là người giữ giá cao nhất!", "Phiên đấu giá đã kết thúc!", v.v.
+            showAlert(Alert.AlertType.ERROR, "Thông báo đấu giá", e.getMessage());
+        } catch (Exception e) {
+            // Bắt các lỗi hệ thống khác
+            showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Có lỗi xảy ra: " + e.getMessage());
+        }
+    }
+    private void updateBalanceUI() {
+        if (currentBidder != null) {
+            // Cập nhật số dư lên Label lblBalance
+            // Giả sử label của bạn tên là lblBalance, hãy đổi tên nếu khác nhé
+            lblBalance.setText(String.format("%.2f $", currentBidder.getAvailableBalance()));
         }
     }
 }

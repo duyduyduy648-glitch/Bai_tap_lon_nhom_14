@@ -3,7 +3,7 @@ package com.auction.common.model;
 public class Bidder extends User{
     private double availableBalance = 0;
     private double frozenBalance = 0;
-    public Bidder (String username, String password){
+    public Bidder (String username, String password, Role role){
         super(username, password,Role.BIDDER);
     }
     public double getAvailableBalance(){
