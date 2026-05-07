@@ -1,6 +1,8 @@
 package com.auction.dao;
 
 import com.auction.common.model.Item;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public interface ItemDAO {

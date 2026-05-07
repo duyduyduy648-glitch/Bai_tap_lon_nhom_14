@@ -13,7 +13,6 @@ import java.util.Map;
 
 public class MainApp extends Application {
 
-    // ✅ PHẢI là static để LoginController, RegisterController gọi được
     private static Stage primaryStage;
     private static final Map<String, Auction> activeAuctions = new HashMap<>();
 
@@ -37,12 +36,10 @@ public class MainApp extends Application {
         primaryStage.show();
     }
 
-    // ✅ PHẢI là static để các Controller khác gọi được
     public static void switchScene(String fxmlPath) throws Exception {
         Parent root = FXMLLoader.load(MainApp.class.getResource(fxmlPath));
 
         // Màn hình quản lý và Sàn đấu giá thì rộng hơn
-        // BỒI THÊM: Thêm kiểm tra "BidderView" để giao diện không bị co xíu
         if (fxmlPath.contains("ItemManagement") || fxmlPath.contains("BidderView")) {
             primaryStage.setScene(new Scene(root, 850, 600)); // Tăng lên 850 để đủ chỗ cho các cột TableView
             primaryStage.setTitle("Hệ thống Đấu giá - Nhóm 14");
@@ -51,7 +48,6 @@ public class MainApp extends Application {
         }
     }
 
-    // --- BỒI THÊM: Phương thức để lấy Stage chính (Cần thiết cho LoginController) ---
     public static Stage getPrimaryStage() {
         return primaryStage;
     }

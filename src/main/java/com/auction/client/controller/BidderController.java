@@ -21,6 +21,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Animation;
 import javafx.util.Duration;
 import javafx.scene.layout.VBox;
+import java.util.List;
+import java.util.ArrayList;
 
 public class BidderController {
 
@@ -79,10 +81,33 @@ public class BidderController {
                 }
             }
         }
-
+        loadDataFromServer();
         // Bồi thêm: Bộ cập nhật thời gian thực để Bidder thấy giây nhảy lùi
         Timeline timeline = new Timeline(
-                new KeyFrame(Duration.seconds(1), e -> table.refresh())
+                new KeyFrame(Duration.seconds(2), e -> {
+                    List<Item> latestItems = itemDAO.getAllItems();
+                    if (latestItems == null || latestItems.isEmpty()) return;
+
+                    for (Item latest : latestItems) {
+                        for (Item current : data) {
+                            if (current.getId().equals(latest.getId())) {
+
+                                // CHỈ CẬP NHẬT NẾU GIÁ MỚI CAO HƠN GIÁ CŨ
+                                if (latest.getStartingPrice() > current.getStartingPrice()) {
+                                    current.setStartingPrice(latest.getStartingPrice());
+
+                                    Auction auction = MainApp.getAuctionForItem(current);
+                                    if (auction != null && latest.getBidList() != null && !latest.getBidList().isEmpty()) {
+                                        // Cập nhật lại toàn bộ danh sách mới từ file
+                                        auction.getBidList().clear();
+                                        auction.getBidList().addAll(latest.getBidList());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    table.refresh();
+                })
         );
         timeline.setCycleCount(Animation.INDEFINITE);
         timeline.play();
@@ -97,6 +122,10 @@ public class BidderController {
             });
             return row;
         });
+    }
+    private void loadDataFromServer() {
+        data = FXCollections.observableArrayList(itemDAO.getAllItems());
+        table.setItems(data);
     }
 
     // --- BỒI THÊM: Nhận dữ liệu Bidder từ LoginController ---
@@ -233,7 +262,8 @@ public class BidderController {
         lblCurrentPrice.setStyle("-fx-text-fill: red; -fx-font-weight: bold; -fx-font-size: 14px;");
 
         TextField txtInputBid = new TextField();
-        txtInputBid.setPromptText("Nhập giá mới (Min: " + (auction.getCurrentPrice() + item.getMinIncrement()) + ")");
+        double minPrice = auction.getCurrentPrice() + item.getMinIncrement();
+        txtInputBid.setPromptText(String.format("Nhập giá mới (Min: %.1f)", minPrice));
 
         Button btnBid = new Button("XÁC NHẬN ĐẶT GIÁ");
         btnBid.setMaxWidth(Double.MAX_VALUE);
@@ -242,7 +272,7 @@ public class BidderController {
         // --- BỘ CẬP NHẬT TỰ ĐỘNG (REAL-TIME) ---
         Timeline detailTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             txtAuctionDetails.setText(auction.getInfo());
-            lblCurrentPrice.setText("Giá hiện tại: " + auction.getCurrentPrice() + " $");
+            lblCurrentPrice.setText(String.format("Giá hiện tại: %.1f $", auction.getCurrentPrice()));
         }));
         detailTimer.setCycleCount(Animation.INDEFINITE);
         detailTimer.play();
@@ -266,15 +296,8 @@ public class BidderController {
                 showAlert(Alert.AlertType.WARNING, "Chú ý", "Vui lòng nhập số tiền!");
                 return;
             }
-            // 1. Chuyển đổi dữ liệu nhập vào
             double amount = Double.parseDouble(amountStr);
-            // 2. Tạo đối tượng giao dịch đặt giá mới
-            // Cần đảm bảo BidTransaction của bạn nhận (Bidder, double) trong Constructor
             BidTransaction newBid = new BidTransaction(currentBidder, amount);
-
-            // 3. Lấy đối tượng Auction đang quản lý Item này
-            // Giả sử bạn có một cách để lấy Auction (qua Map hoặc Manager)
-            // Nếu bạn đang lưu Auction ngay trong Item thì dùng: item.getAuction()
             Auction auction = MainApp.getAuctionForItem(item);
 
             if (auction == null) {
@@ -282,15 +305,7 @@ public class BidderController {
                 return;
             }
 
-            // 4. GỌI AUCTION XỬ LÝ (QUAN TRỌNG NHẤT)
-            // Hàm placeBid(newBid) của bạn sẽ tự động:
-            // - Check status (UPCOMING/ACTIVE/FINISHED)
-            // - Check giá tối thiểu (minIncrement)
-            // - Check nếu người dùng đang giữ giá cao nhất (lastBid.getBidder())
-            // - Tự động gọi lastBid.refund() để trả tiền cho người cũ
-            // - Tự động gọi newBid.frozen() để trừ tiền của currentBidder
             auction.placeBid(newBid);
-
             // --- NẾU CHẠY ĐẾN ĐÂY LÀ THÀNH CÔNG ---
 
             // 5. Cập nhật dữ liệu hiển thị (UI)

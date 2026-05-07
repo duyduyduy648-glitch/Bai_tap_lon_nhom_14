@@ -13,8 +13,6 @@ public class ItemAdapter implements JsonDeserializer<Item> {
     public Item deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonObject jsonObject = json.getAsJsonObject();
 
-        // Gson sẽ "ngửi" xem trong chuỗi JSON có thuộc tính đặc trưng nào không để ép về đúng class con
-        // Ghi chú: Nếu các class Art, Electronics... của bạn dùng tên biến khác, bạn có thể tự sửa lại chữ ở trong ngoặc kép nhé.
         if (jsonObject.has("artist") || jsonObject.has("painter") || jsonObject.has("material")) {
             return context.deserialize(jsonObject, Art.class);
         } else if (jsonObject.has("brand") || jsonObject.has("warrantyMonths")) {

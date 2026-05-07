@@ -1,6 +1,7 @@
 package com.auction.common.model;
 
 import java.time.*;
+import java.util.ArrayList;
 
 public abstract class Item {
     protected Seller seller;
@@ -12,6 +13,7 @@ public abstract class Item {
     protected LocalDateTime startTime;
     protected LocalDateTime endTime;
     protected final double minIncrement;
+    private ArrayList<BidTransaction> BidList = new ArrayList<>();
     public Item(Seller seller, String id, String name, String description, double startingPrice,
                 LocalDateTime startTime, LocalDateTime endTime, double minIncrement) {
         this.seller = seller;
@@ -113,5 +115,13 @@ public abstract class Item {
     @Override
     public String toString() {
         return "Mã SP: " + id + "\nTên: " + name + "\nMô tả: " + description;
+    }
+    public ArrayList<BidTransaction> getBidList() {
+        if (BidList == null) return new ArrayList<>();
+        return BidList;
+    }
+
+    public void setBidList(ArrayList<BidTransaction> bidList) {
+        this.BidList = bidList;
     }
 }

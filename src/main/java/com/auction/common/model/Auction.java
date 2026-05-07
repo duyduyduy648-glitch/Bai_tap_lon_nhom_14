@@ -138,6 +138,9 @@ public class Auction {
     public String getInfo() {
         StringBuilder sb = new StringBuilder();
         sb.append("Danh sách đặt giá:\n");
+        if (BidList == null) {
+            BidList = new ArrayList<>();
+        }
         if (BidList.isEmpty()) {
             sb.append("- Chưa có người đặt giá.\n");
         } else {
@@ -148,5 +151,16 @@ public class Auction {
             }
         }
         return sb.toString();
+    }
+    public ArrayList<BidTransaction> getBidList() {
+        return BidList;
+    }
+
+    public void setBidList(ArrayList<BidTransaction> bidList) {
+        if (bidList != null) {
+            this.BidList = bidList;
+        } else {
+            this.BidList = new ArrayList<>(); // Nếu nạp vào null thì thay bằng danh sách rỗng
+        }
     }
 }
