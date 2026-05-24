@@ -38,6 +38,13 @@ public class UserDAO {
         return users.containsKey(username.toLowerCase());
     }
 
+    // Lấy thông tin đối tượng User dựa trên tên đăng nhập
+    public static synchronized User getUser(String username) {
+        if (username == null) return null;
+        HashMap<String, User> users = loadUsers();
+        return users.get(username.toLowerCase());
+    }
+
     // Lưu người dùng mới vào hệ thống (Chấp nhận cả đối tượng con là Bidder hoặc Seller nhờ Đa hình)
     public static synchronized void saveUser(User user) {
         if (user == null || user.getUsername() == null) return;

@@ -2,6 +2,8 @@ package com.auction.dao;
 
 import com.auction.common.factory.ItemFactory;
 import com.auction.common.model.Item;
+import com.auction.common.model.Seller;
+import com.auction.common.model.Role;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -16,9 +18,12 @@ public class InMemoryItemDAOTest {
         // 1. Khởi tạo cái "kho"
         ItemDAO dao = new JsonItemDAO();
 
-        // 2. Nhờ Factory tạo ra 1 bức tranh
-        Item item = ItemFactory.createItem("art", "A01", "Bức tranh hoa hướng dương", "Tranh sơn dầu",
-                500.0, LocalDateTime.now(), LocalDateTime.now().plusDays(7), "Van Gogh");
+        // 2. Tạo Seller
+        Seller seller = new Seller("seller1", "123456");
+
+        // 3. Nhờ Factory tạo ra 1 bức tranh
+        Item item = ItemFactory.createItem(seller, "art", "A01", "Bức tranh hoa hướng dương", "Tranh sơn dầu",
+                500.0, LocalDateTime.now(), LocalDateTime.now().plusDays(7), 10.0, "Van Gogh");
 
         // 3. Ném nó vào kho
         dao.saveItem(item);

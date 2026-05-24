@@ -2,9 +2,10 @@
 package com.auction.client.controller;
 
 import com.auction.client.MainApp;
+import com.auction.client.NetworkClient;
 import com.auction.common.model.*;
-import com.auction.dao.ItemDAO;
-import com.auction.dao.JsonItemDAO;
+import com.auction.common.protocol.Request;
+import com.auction.common.protocol.Response;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -30,10 +31,9 @@ public class BidderController {
     @FXML private TableColumn<Item, Double> minIncCol;
     @FXML private Label lblUsername, lblBalance;
 
-
-    private final ItemDAO itemDAO = new JsonItemDAO();
     private ObservableList<Item> data;
     private Bidder currentBidder;
+    private NetworkClient.BroadcastListener broadcastListener;
 
     @FXML
     public void initialize() {
@@ -52,54 +52,24 @@ public class BidderController {
                 : new SimpleStringProperty("NO AUCTION");
         });
 
-        data = FXCollections.observableArrayList(itemDAO.getAllItems());
+        data = FXCollections.observableArrayList();
         table.setItems(data);
-
-        for (Item item : data) {
-            if (MainApp.getAuctionForItem(item) == null) {
-                if (item.getSeller() != null) {
-                    Auction auction = new Auction(item.getSeller(), item);
-                    MainApp.registerAuction(item.getId(), auction);
-                } else {
-                    System.out.println("Cảnh báo: Sản phẩm "
-                        + item.getId() + " đang thiếu thông tin người bán!");
-                }
-            }
-        }
 
         loadDataFromServer();
 
-        // ← FIX: Lấy Bidder từ session MainApp thay vì chờ setBidder() bên ngoài
+        // Lấy Bidder từ session MainApp
         User user = MainApp.getCurrentUser();
         if (user instanceof Bidder bidder) {
             setBidder(bidder);
         }
 
-        // Bộ đếm cập nhật giá realtime mỗi 2 giây
-        Timeline timeline = new Timeline(
-            new KeyFrame(Duration.seconds(2), e -> {
-                List<Item> latestItems = itemDAO.getAllItems();
-                if (latestItems == null || latestItems.isEmpty()) return;
-                for (Item latest : latestItems) {
-                    for (Item current : data) {
-                        if (current.getId().equals(latest.getId())
-                            && latest.getStartingPrice() > current.getStartingPrice()) {
-                            current.setStartingPrice(latest.getStartingPrice());
-                            Auction auction = MainApp.getAuctionForItem(current);
-                            if (auction != null
-                                && latest.getBidList() != null
-                                && !latest.getBidList().isEmpty()) {
-                                auction.getBidList().clear();
-                                auction.getBidList().addAll(latest.getBidList());
-                            }
-                        }
-                    }
-                }
-                table.refresh();
-            })
-        );
-        timeline.setCycleCount(Animation.INDEFINITE);
-        timeline.play();
+        // Đăng ký nhận Broadcast từ Server
+        broadcastListener = (type, payload) -> {
+            javafx.application.Platform.runLater(() -> {
+                handleServerBroadcast(type, payload);
+            });
+        };
+        NetworkClient.getInstance().addBroadcastListener(broadcastListener);
 
         table.setRowFactory(tv -> {
             TableRow<Item> row = new TableRow<>();
@@ -112,9 +82,26 @@ public class BidderController {
         });
     }
 
+    @SuppressWarnings("unchecked")
     private void loadDataFromServer() {
-        data = FXCollections.observableArrayList(itemDAO.getAllItems());
-        table.setItems(data);
+        try {
+            Response response = NetworkClient.getInstance().sendRequestAndWait(
+                new Request("GET_ITEMS", null)
+            );
+            if ("SUCCESS".equals(response.getStatus())) {
+                List<Auction> auctions = (List<Auction>) response.getData();
+                data.clear();
+                for (Auction auction : auctions) {
+                    MainApp.registerAuction(auction.getItem().getId(), auction);
+                    data.add(auction.getItem());
+                }
+                table.refresh();
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể lấy danh sách đấu giá: " + response.getMessage());
+            }
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Lỗi Hệ Thống", "Đã xảy ra lỗi: " + e.getMessage());
+        }
     }
 
     public void setBidder(Bidder bidder) {
@@ -126,6 +113,9 @@ public class BidderController {
     @FXML
     private void handleLogout(ActionEvent event) {
         try {
+            if (broadcastListener != null) {
+                NetworkClient.getInstance().removeBroadcastListener(broadcastListener);
+            }
             MainApp.setCurrentUser(null); // Xóa session khi logout
             MainApp.switchScene("/com/auction/client/view/LoginView.fxml");
         } catch (Exception e) {
@@ -136,14 +126,54 @@ public class BidderController {
 
     @FXML
     private void handleSearchItem(ActionEvent event) {
-        showAlert(Alert.AlertType.INFORMATION, "Tính năng đang phát triển",
-            "Mở giao diện Tìm kiếm sản phẩm...");
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Tìm kiếm sản phẩm");
+        dialog.setHeaderText("Nhập từ khóa tìm kiếm (để trống để tải lại toàn bộ):");
+        dialog.setContentText("Từ khóa:");
+        dialog.showAndWait().ifPresent(keyword -> {
+            try {
+                Response res = NetworkClient.getInstance().sendRequestAndWait(
+                    new Request("SEARCH_ITEMS", keyword)
+                );
+                if ("SUCCESS".equals(res.getStatus())) {
+                    List<Auction> results = (List<Auction>) res.getData();
+                    data.clear();
+                    for (Auction auction : results) {
+                        MainApp.registerAuction(auction.getItem().getId(), auction);
+                        data.add(auction.getItem());
+                    }
+                    table.refresh();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi tìm kiếm", res.getMessage());
+                }
+            } catch (Exception e) {
+                showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", e.getMessage());
+            }
+        });
     }
 
     @FXML
     private void handleMyAuctions(ActionEvent event) {
-        showAlert(Alert.AlertType.INFORMATION, "Tính năng đang phát triển",
-            "Mở giao diện phiên đang tham gia...");
+        if (currentBidder == null) return;
+        try {
+            Response res = NetworkClient.getInstance().sendRequestAndWait(
+                new Request("GET_MY_BIDS", currentBidder.getUsername())
+            );
+            if ("SUCCESS".equals(res.getStatus())) {
+                List<Auction> results = (List<Auction>) res.getData();
+                data.clear();
+                for (Auction auction : results) {
+                    MainApp.registerAuction(auction.getItem().getId(), auction);
+                    data.add(auction.getItem());
+                }
+                table.refresh();
+                showAlert(Alert.AlertType.INFORMATION, "Phiên đang tham gia", "Đã hiển thị các phiên đấu giá bạn từng tham gia. \nBấm 'Tìm kiếm' và để trống từ khóa để quay lại danh sách đầy đủ.");
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Lỗi", res.getMessage());
+            }
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", e.getMessage());
+        }
     }
 
     @FXML
@@ -161,9 +191,18 @@ public class BidderController {
             try {
                 double amount = Double.parseDouble(amountStr);
                 currentBidder.deposit(amount);
-                updateBalanceUI();
-                showAlert(Alert.AlertType.INFORMATION, "Thành công",
-                    String.format("Đã nạp thành công %.2f $ vào tài khoản.", amount));
+                
+                // Đồng bộ lên Server
+                Response res = NetworkClient.getInstance().sendRequestAndWait(
+                    new Request("UPDATE_USER", currentBidder)
+                );
+                if ("SUCCESS".equals(res.getStatus())) {
+                    updateBalanceUI();
+                    showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                        String.format("Đã nạp thành công %.2f $ vào tài khoản.", amount));
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi Server", res.getMessage());
+                }
             } catch (NumberFormatException e) {
                 showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu",
                     "Vui lòng nhập một con số hợp lệ!");
@@ -217,9 +256,14 @@ public class BidderController {
             "-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold;");
 
         Timeline detailTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            txtAuctionDetails.setText(auction.getInfo());
-            lblCurrentPrice.setText(
-                String.format("Giá hiện tại: %.1f $", auction.getCurrentPrice()));
+            Auction latestAuction = MainApp.getAuctionForItem(item);
+            if (latestAuction != null) {
+                txtAuctionDetails.setText(latestAuction.getInfo());
+                lblCurrentPrice.setText(
+                    String.format("Giá hiện tại: %.1f $", latestAuction.getCurrentPrice()));
+                double nextMin = latestAuction.getCurrentPrice() + item.getMinIncrement();
+                txtInputBid.setPromptText(String.format("Nhập giá mới (Min: %.1f)", nextMin));
+            }
         }));
         detailTimer.setCycleCount(Animation.INDEFINITE);
         detailTimer.play();
@@ -230,9 +274,53 @@ public class BidderController {
             txtInputBid.clear();
         });
 
+        // --- AUTO BIDDING UI ---
+        Label lblAutoBid = new Label("--- CẤU HÌNH ĐẤU GIÁ TỰ ĐỘNG ---");
+        lblAutoBid.setStyle("-fx-font-weight: bold;");
+        
+        TextField txtMaxBid = new TextField();
+        txtMaxBid.setPromptText("Nhập mức giá tối đa ($)");
+        
+        TextField txtIncrement = new TextField();
+        txtIncrement.setPromptText("Nhập bước giá mong muốn ($)");
+
+        Button btnAutoBid = new Button("ĐĂNG KÝ ĐẤU GIÁ TỰ ĐỘNG");
+        btnAutoBid.setMaxWidth(Double.MAX_VALUE);
+        btnAutoBid.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
+        
+        btnAutoBid.setOnAction(e -> {
+            try {
+                if (txtMaxBid.getText().isEmpty() || txtIncrement.getText().isEmpty()) {
+                    showAlert(Alert.AlertType.WARNING, "Chú ý", "Vui lòng nhập đầy đủ giá tối đa và bước giá!");
+                    return;
+                }
+                double maxBid = Double.parseDouble(txtMaxBid.getText());
+                double increment = Double.parseDouble(txtIncrement.getText());
+                
+                AutoBid autoBid = new AutoBid(currentBidder, item.getId(), maxBid, increment);
+                Response response = NetworkClient.getInstance().sendRequestAndWait(
+                    new Request("REGISTER_AUTO_BID", autoBid)
+                );
+                if ("SUCCESS".equals(response.getStatus())) {
+                    showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã đăng ký đấu giá tự động!");
+                    txtMaxBid.clear();
+                    txtIncrement.clear();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi", response.getMessage());
+                }
+            } catch (NumberFormatException ex) {
+                showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu", "Vui lòng nhập số hợp lệ!");
+            } catch (IllegalArgumentException ex) {
+                showAlert(Alert.AlertType.ERROR, "Thông báo", ex.getMessage());
+            } catch (Exception ex) {
+                showAlert(Alert.AlertType.ERROR, "Lỗi", ex.getMessage());
+            }
+        });
+
         layout.getChildren().addAll(lblTitle, txtAuctionDetails,
-            lblCurrentPrice, txtInputBid, btnBid);
-        stage.setScene(new Scene(layout, 450, 550));
+            lblCurrentPrice, txtInputBid, btnBid,
+            new Separator(), lblAutoBid, txtMaxBid, txtIncrement, btnAutoBid);
+        stage.setScene(new Scene(layout, 450, 750));
         stage.show();
     }
 
@@ -250,13 +338,19 @@ public class BidderController {
                     "Không tìm thấy phiên đấu giá cho sản phẩm này!");
                 return;
             }
-            auction.placeBid(newBid);
-            item.setStartingPrice(auction.getCurrentPrice());
-            item.setCurrentHighestBid(auction.getCurrentPrice());
-            table.refresh();
-            updateBalanceUI();
-            showAlert(Alert.AlertType.INFORMATION, "Thành công",
-                "Bạn đã đặt giá thành công!");
+
+            // Gửi qua Server thay vì đặt trực tiếp cục bộ
+            Response response = NetworkClient.getInstance().sendRequestAndWait(
+                new Request("PLACE_BID", new Object[]{item.getId(), newBid})
+            );
+
+            if ("SUCCESS".equals(response.getStatus())) {
+                showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                    "Bạn đã đặt giá thành công!");
+                refreshUserBalance();
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Thất bại", response.getMessage());
+            }
         } catch (NumberFormatException e) {
             showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu",
                 "Vui lòng nhập một con số hợp lệ!");
@@ -265,6 +359,70 @@ public class BidderController {
         } catch (Exception e) {
             showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống",
                 "Có lỗi xảy ra: " + e.getMessage());
+        }
+    }
+
+    private void handleServerBroadcast(String type, Object payload) {
+        switch (type) {
+            case "NEW_ITEM" -> {
+                Item newItem = (Item) payload;
+                Auction newAuction = new Auction(newItem.getSeller(), newItem);
+                MainApp.registerAuction(newItem.getId(), newAuction);
+
+                boolean exists = false;
+                for (Item current : data) {
+                    if (current.getId().equals(newItem.getId())) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    data.add(newItem);
+                }
+                table.refresh();
+            }
+            case "BID_UPDATE" -> {
+                Auction updatedAuction = (Auction) payload;
+                MainApp.registerAuction(updatedAuction.getItem().getId(), updatedAuction);
+
+                for (Item current : data) {
+                    if (current.getId().equals(updatedAuction.getItem().getId())) {
+                        current.setStartingPrice(updatedAuction.getCurrentPrice());
+                        current.setBidList(updatedAuction.getBidList());
+                        break;
+                    }
+                }
+                table.refresh();
+                refreshUserBalance();
+            }
+            case "AUCTION_FINISHED" -> {
+                Auction finishedAuction = (Auction) payload;
+                MainApp.registerAuction(finishedAuction.getItem().getId(), finishedAuction);
+                table.refresh();
+                refreshUserBalance();
+            }
+        }
+    }
+
+    private void refreshUserBalance() {
+        if (currentBidder != null) {
+            new Thread(() -> {
+                try {
+                    Response res = NetworkClient.getInstance().sendRequestAndWait(
+                        new Request("GET_USER", currentBidder.getUsername())
+                    );
+                    if ("SUCCESS".equals(res.getStatus())) {
+                        User updatedUser = (User) res.getData();
+                        if (updatedUser instanceof Bidder b) {
+                            javafx.application.Platform.runLater(() -> {
+                                setBidder(b);
+                            });
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("[BidderController] Lỗi cập nhật số dư: " + e.getMessage());
+                }
+            }).start();
         }
     }
 

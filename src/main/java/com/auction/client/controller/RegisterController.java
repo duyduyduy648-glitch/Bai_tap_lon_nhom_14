@@ -1,8 +1,10 @@
 package com.auction.client.controller;
 
 import com.auction.client.MainApp;
+import com.auction.client.NetworkClient;
 import com.auction.common.model.*;
-import com.auction.dao.UserDAO;
+import com.auction.common.protocol.Request;
+import com.auction.common.protocol.Response;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
@@ -38,26 +40,18 @@ public class RegisterController {
             User newUser = switch (selectedRole) {
                 case BIDDER -> new Bidder(username, password);
                 case SELLER -> new Seller(username, password);
-                // Nếu dự án em có thêm Admin thì uncomment dòng dưới:
-                // case ADMIN -> new Admin(username, password);
                 default -> throw new IllegalArgumentException("Vai trò không hợp lệ!");
             };
 
-            // ---------------------------------------------------------
-            // TODO (TUẦN SAU - LẬP TRÌNH MẠNG):
-            // Thay vì gọi trực tiếp UserDAO ở đây, em sẽ chuyển thành:
-            // 1. Chuyển đối tượng newUser thành chuỗi JSON (dùng thư viện Gson/Jackson)
-            // 2. Gửi chuỗi JSON đó qua Socket (hoặc API) lên Server
-            // 3. Server nhận được, Server mới gọi UserDAO để lưu và trả kết quả về cho Client.
-            // ---------------------------------------------------------
+            Response response = NetworkClient.getInstance().sendRequestAndWait(
+                new Request("REGISTER", newUser)
+            );
 
-            // CODE TẠM THỜI ĐỂ TEST GIAO DIỆN (Sẽ xóa khi làm Server)
-            if (UserDAO.isUserExists(username)) {
-                showAlert(Alert.AlertType.ERROR, "Lỗi", "Tên đăng nhập đã tồn tại!");
-            } else {
-                UserDAO.saveUser(newUser); // newUser giờ đây là 1 Bidder hoặc Seller
+            if ("SUCCESS".equals(response.getStatus())) {
                 showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đăng ký thành công!\nVui lòng đăng nhập.");
                 handleGoToLogin(); // Tự động chuyển trang sau khi đăng ký thành công
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Thất bại", response.getMessage());
             }
 
         } catch (Exception e) {

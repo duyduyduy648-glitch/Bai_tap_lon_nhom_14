@@ -2,8 +2,10 @@
 package com.auction.client.controller;
 
 import com.auction.client.MainApp;
+import com.auction.client.NetworkClient;
 import com.auction.common.model.User;
-import com.auction.dao.UserDAO;
+import com.auction.common.protocol.Request;
+import com.auction.common.protocol.Response;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.PasswordField;
@@ -28,18 +30,20 @@ public class LoginController {
         }
 
         try {
-            User user = UserDAO.validateUser(username, password);
+            Response response = NetworkClient.getInstance().sendRequestAndWait(
+                new Request("LOGIN", new String[]{username, password})
+            );
 
-            if (user != null) {
+            if ("SUCCESS".equals(response.getStatus())) {
+                User user = (User) response.getData();
                 showAlert(Alert.AlertType.INFORMATION, "Thành công",
                     "Đăng nhập thành công!\nChào mừng "
                         + user.getUsername() + " (" + user.getRole() + ")");
 
-                // ← FIX 1: Lưu user vào session trước khi chuyển màn hình
+                // Lưu user vào session trước khi chuyển màn hình
                 MainApp.setCurrentUser(user);
 
                 switch (user.getRole()) {
-                    // ← FIX 2: Sửa đúng tên file FXML (BidderView, không phải BidderDashboardView)
                     case BIDDER -> MainApp.switchScene(
                         "/com/auction/client/view/BidderView.fxml");
                     case SELLER -> MainApp.switchScene(
@@ -48,8 +52,7 @@ public class LoginController {
                         "/com/auction/client/view/LoginView.fxml");
                 }
             } else {
-                showAlert(Alert.AlertType.ERROR, "Thất bại",
-                    "Tên đăng nhập hoặc mật khẩu không chính xác!");
+                showAlert(Alert.AlertType.ERROR, "Thất bại", response.getMessage());
             }
         } catch (Exception e) {
             showAlert(Alert.AlertType.ERROR, "Lỗi Hệ Thống",

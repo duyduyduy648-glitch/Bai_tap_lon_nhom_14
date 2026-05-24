@@ -2,9 +2,15 @@ package com.auction.common.model;
 
 public class Seller extends User {
 
+    private double balance = 0.0;
+
     // Constructor chỉ cần 2 tham số, Role được truyền ngầm định cho lớp cha
     public Seller(String username, String password) {
         super(username, password, Role.SELLER);
+    }
+
+    public synchronized double getBalance() {
+        return balance;
     }
 
     // Hàm nhận tiền khi phiên đấu giá kết thúc thành công
@@ -12,7 +18,7 @@ public class Seller extends User {
         if (amount <= 0) {
             throw new IllegalArgumentException("Số tiền nhận không hợp lệ!");
         }
-        // Tạm thời ta in ra log để theo dõi.
-        System.out.println("[Hệ thống] Seller " + getUsername() + " đã nhận thanh toán: " + amount + " $");
+        this.balance += amount;
+        System.out.println("[Hệ thống] Seller " + getUsername() + " đã nhận thanh toán: " + amount + " $. Số dư mới: " + this.balance + " $");
     }
 }

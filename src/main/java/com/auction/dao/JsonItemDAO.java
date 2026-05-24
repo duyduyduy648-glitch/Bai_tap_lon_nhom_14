@@ -51,7 +51,7 @@ public class JsonItemDAO implements ItemDAO {
         }
     }
     @Override
-    public void saveItem(Item item) {
+    public synchronized void saveItem(Item item) {
         // Thêm sản phẩm vào danh sách
         database.add(item);
 
@@ -67,7 +67,7 @@ public class JsonItemDAO implements ItemDAO {
 
     // Các hàm này tạm thời để trống, chúng ta sẽ viết code cho nó sau
     @Override
-    public Item getItemById(String id) {
+    public synchronized Item getItemById(String id) {
         for (Item item : database) {
             if (item.getId().equals(id)) {
                 return item;
@@ -77,19 +77,19 @@ public class JsonItemDAO implements ItemDAO {
     }
 
     @Override
-    public List<Item> getAllItems() {
+    public synchronized List<Item> getAllItems() {
         return database;
     }
 
     @Override
-    public void updateItem(Item item) {
+    public synchronized void updateItem(Item item) {
         // Logic cập nhật: Xóa cái cũ, thêm cái mới rồi ghi lại ra file
         deleteItem(item.getId());
         saveItem(item);
     }
 
     @Override
-    public void deleteItem(String id) {
+    public synchronized void deleteItem(String id) {
         // Xóa sản phẩm khỏi danh sách
         database.removeIf(item -> item.getId().equals(id));
 

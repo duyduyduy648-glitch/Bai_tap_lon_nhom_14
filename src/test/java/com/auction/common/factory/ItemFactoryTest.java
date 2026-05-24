@@ -2,6 +2,8 @@ package com.auction.common.factory;
 
 import com.auction.common.model.Art;
 import com.auction.common.model.Item;
+import com.auction.common.model.Seller;
+import com.auction.common.model.Role;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
@@ -14,6 +16,7 @@ public class ItemFactoryTest {
     @Test
     public void testCreateArt_Success() {
         // 1. Chuẩn bị dữ liệu (Arrange)
+        Seller seller = new Seller("seller1", "123456");
         String id = "ART001";
         String name = "Mona Lisa";
         String desc = "Bức tranh nổi tiếng";
@@ -23,7 +26,7 @@ public class ItemFactoryTest {
         String artist = "Leonardo da Vinci";
 
         // 2. Thực thi phương thức cần test (Act)
-        Item item = ItemFactory.createItem("art", id, name, desc, price, start, end, artist);
+        Item item = ItemFactory.createItem(seller, "art", id, name, desc, price, start, end, 10.0, artist);
 
         // 3. Kiểm tra kết quả (Assert)
         assertNotNull(item, "Item không được phép null");

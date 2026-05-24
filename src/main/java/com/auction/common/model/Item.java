@@ -90,6 +90,11 @@ public abstract class Item implements Serializable {
     public LocalDateTime getStartTime() { return startTime; }
     public LocalDateTime getEndTime() { return endTime; }
 
+    // SỬA LỖI: Thêm hàm setEndTime để phục vụ thuật toán Anti-sniping
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
     // SỬA LỖI: Thêm hàm setCurrentHighestBid phục vụ Controller dòng 273
     public double getCurrentHighestBid() { return currentHighestBid; }
     public void setCurrentHighestBid(double currentHighestBid) {
