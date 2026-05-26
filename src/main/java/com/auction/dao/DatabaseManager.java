@@ -6,15 +6,16 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DatabaseManager {
-    // Thông tin kết nối MySQL từ Railway
-    private static final String HOST = "kodama.proxy.rlwy.net";
-    private static final String PORT = "16400";
-    private static final String DB_NAME = "railway";
-    private static final String USER = "root";
-    private static final String PASS = "NwlOmLVZlDDneACUTvApzOoYTlJsfJYh";
-    
+    // Đọc thông tin kết nối từ biến môi trường Railway
+    // Nếu không có (chạy local) thì dùng giá trị mặc định
+    private static final String HOST = System.getenv().getOrDefault("MYSQL_HOST", "kodama.proxy.rlwy.net");
+    private static final String PORT = System.getenv().getOrDefault("MYSQL_PORT", "16400");
+    private static final String DB_NAME = System.getenv().getOrDefault("MYSQL_DATABASE", "railway");
+    private static final String USER = System.getenv().getOrDefault("MYSQL_USER", "root");
+    private static final String PASS = System.getenv().getOrDefault("MYSQL_PASSWORD", "NwlOmLVZlDDneACUTvApzOoYTlJsfJYh");
+
     // Chuỗi kết nối JDBC
-    private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME 
+    private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME
             + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8";
 
     static {

@@ -6,7 +6,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class AuctionServer {
-    public static final int PORT = 8888;
+    // Railway tự inject biến môi trường PORT, nếu chạy local thì dùng 8888
+    public static final int PORT = Integer.parseInt(System.getenv().getOrDefault("PORT", "8888"));
 
     public static void main(String[] args) {
         System.out.println("=================================================");
